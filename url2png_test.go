@@ -5,6 +5,8 @@ import (
 	"os"
 	"testing"
 
+	"golang.org/x/net/context"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,6 +33,21 @@ func TestScreenshot(t *testing.T) {
 	n, err := ioutil.ReadAll(r)
 	a.NoError(err)
 	a.NotEqual(0, n)
+}
+
+func TestCancel(t *testing.T) {
+	t.Parallel()
+
+	a := assert.New(t)
+
+	c := newClient()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	r, err := c.ScreenshotWithContext(ctx, "http://www.fknsrs.biz/", nil)
+	a.Error(err)
+	a.Equal("context canceled", err.Error())
+	a.Nil(r)
 }
 
 func TestBadURL(t *testing.T) {

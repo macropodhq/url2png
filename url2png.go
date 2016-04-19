@@ -10,12 +10,24 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"golang.org/x/net/context"
+	"golang.org/x/net/context/ctxhttp"
 )
 
 // Client holds the API key and secret for a given url2png account.
 type Client struct {
 	Key    string
 	Secret string
+	Base   *http.Client
+}
+
+func (c Client) client() *http.Client {
+	b := c.Base
+	if b == nil {
+		return http.DefaultClient
+	}
+	return b
 }
 
 // Options represents the options that can be provided to the url2png screenshot
@@ -35,6 +47,13 @@ type Options struct {
 // Screenshot submits a request to the url2png service, returning a stream of
 // the PNG data, or an error.
 func (c Client) Screenshot(website string, options *Options) (io.ReadCloser, error) {
+	ctx := context.Background()
+	return c.ScreenshotWithContext(ctx, website, options)
+}
+
+// ScreenshotWithContext submits a request with context to the url2png service, returning a stream of
+// the PNG data, or an error.
+func (c Client) ScreenshotWithContext(ctx context.Context, website string, options *Options) (io.ReadCloser, error) {
 	q := make(url.Values)
 
 	q.Set("url", website)
@@ -89,7 +108,7 @@ func (c Client) Screenshot(website string, options *Options) (io.ReadCloser, err
 		RawQuery: eq,
 	}
 
-	res, err := http.Get(u.String())
+	res, err := ctxhttp.Get(ctx, c.client(), u.String())
 	if err != nil {
 		return nil, err
 	}
